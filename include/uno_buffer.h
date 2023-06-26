@@ -38,9 +38,33 @@ UnoLine* uno_line_new(uint64_t len);
  */
 void uno_line_resize(UnoLine* l, uint64_t new_size);
 
+/**
+ * Writes given string to the line. If the line is smaller than the
+ * string, resizes the line.
+ * @param l to write
+ * @param str to insert
+ * @param len length of the string
+ */
 void uno_line_write(UnoLine* l, const char* str, uint64_t len);
 
+/**
+ * Writes the given string to the end. If the line is smaller than
+ * the string, resizes the line.
+ * @param l to write
+ * @param str to insert
+ * @param len length of the string
+ */
 void uno_line_append(UnoLine* l, const char* str, uint64_t len);
+
+/**
+ * Writes the given string to the start. If the line is smaller than
+ * the string, resizes the line.
+ * @param l to write
+ * @param str to insert
+ * @param len length of the string
+ */
+void uno_line_prepend(UnoLine* l, const char* str, uint64_t len);
+
 /* Frees the given line, along with the string it holds. */
 void uno_line_destroy(UnoLine* l);
 
@@ -52,8 +76,12 @@ void uno_buffer_add_line_end(UnoBuffer* b, UnoLine* l);
 
 UnoBuffer* uno_buffer_add_line_to(UnoBuffer* b, UnoLine* l, uint64_t row);
 
+void uno_buffer_swap(UnoBuffer* b, uint64_t r1, uint64_t r2);
+
 void uno_delete_line_at(UnoBuffer* b, uint64_t row);
 
 void uno_buffer_destroy(UnoBuffer* b);
+
+void uno_buffer_print(UnoBuffer* b);
 
 #endif // !__UNO_BUFFER__

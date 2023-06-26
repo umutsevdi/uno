@@ -5,10 +5,9 @@
 UnoLine* uno_line_new(uint64_t len)
 {
     char* str = calloc(len + 1, sizeof(char));
-    printf("line\n");
     UnoLine* l = malloc(sizeof(UnoLine));
     l->str = str;
-    l->cap = 2 * len;
+    l->cap = len;
     l->len = 0;
     l->prev = NULL;
     l->next = NULL;
@@ -27,16 +26,17 @@ void uno_line_resize(UnoLine* l, uint64_t new_size)
         free(l->str);
         l->str = str;
         l->str[new_size] = 0;
-        l->cap = 2 * new_size;
+        l->cap = new_size;
     }
 }
 
 void uno_line_write(UnoLine* l, const char* str, uint64_t len)
 {
-    uint64_t to_cpy = len <= l->cap ? len : l->cap;
-    printf("writing %lu char to \n", to_cpy);
-    strncpy(l->str, str, to_cpy);
-    l->len = to_cpy;
+    if (l->cap < len) {
+        uno_line_resize(l, len);
+    }
+    strncpy(l->str, str, len);
+    l->len = len;
     if (str[len] != 0) {
         l->str[len] = 0;
     }
@@ -49,19 +49,26 @@ void uno_line_append(UnoLine* l, const char* str, uint64_t len)
         uno_line_resize(l, len + l->len);
     }
     char_left = l->cap - l->len;
-
     uint64_t to_cpy = len <= char_left ? len : char_left;
-    printf("copying %lu chars to \n", to_cpy);
-    strncpy(&(l->str[l->len]), str, to_cpy);
+    strncpy(l->str + l->len, str, to_cpy);
     l->len = l->len + to_cpy;
+    if (str[len] != 0) {
+        l->str[len] = 0;
+    }
 }
 
 void uno_line_prepend(UnoLine* l, const char* str, uint64_t len)
 {
     uint64_t char_left = l->cap - l->len;
-    uint64_t to_cpy = len <= char_left ? len : char_left;
-    printf("copying %lu chars to \n", to_cpy);
-    strncpy(&(l->str[l->len]), str, to_cpy);
+    if (char_left < len) {
+        uno_line_resize(l, len + l->len);
+    }
+    memmove(l->str + len, l->str, l->len);
+    strncpy(l->str, str, len);
+    l->len = l->len + len;
+    if (str[len] != 0) {
+        l->str[len] = 0;
+    }
 }
 
 void uno_line_destroy(UnoLine* l)
@@ -140,10 +147,40 @@ UnoBuffer* uno_buffer_add_line_to(UnoBuffer* b, UnoLine* l, uint64_t row)
     return b;
 }
 
+void uno_buffer_swap(UnoBuffer* b, uint64_t r1, uint64_t r2)
+{
+    if (b->rows <= r1 || b->rows <= r2 || r1 == r2) {
+        return;
+    }
+    UnoLine* current = b->head;
+    UnoLine* row_ptr1 = NULL;
+    UnoLine* row_ptr2 = NULL;
+    uint64_t row_iter = 0;
+
+    while (row_iter < b->rows && (row_ptr1 == NULL || row_ptr2 == NULL)) {
+        if (r1 == row_iter)
+            row_ptr1 = current;
+        else if (r2 == row_iter)
+            row_ptr2 = current;
+        current = current->next;
+        row_iter++;
+    }
+    if (row_ptr1 == NULL || row_ptr2 == NULL)
+        return; // shouldn't occur
+    char* str = row_ptr1->str;
+    uint64_t len = row_ptr1->len;
+    uint64_t cap = row_ptr1->cap;
+    row_ptr1->str = row_ptr2->str;
+    row_ptr1->len = row_ptr2->len;
+    row_ptr1->cap = row_ptr2->cap;
+    row_ptr2->str = str;
+    row_ptr2->len = len;
+    row_ptr2->cap = cap;
+}
+
 void uno_delete_line_at(UnoBuffer* b, uint64_t row)
 {
     if (row >= b->rows) {
-        // Invalid row, nothing to delete
         return;
     }
     if (row == 0) {
@@ -153,29 +190,24 @@ void uno_delete_line_at(UnoBuffer* b, uint64_t row)
         if (b->head != NULL) {
             b->head->prev = NULL;
         } else {
-            // The buffer is now empty
-            b->tail = NULL;
+            b->tail = NULL; // The buffer is now empty
         }
 
         uno_line_destroy(rm_line);
     } else if (row == b->rows - 1) {
         UnoLine* rm_line = b->tail;
         b->tail = rm_line->prev;
-
         if (b->tail != NULL) {
             b->tail->next = NULL;
         } else {
-            // The buffer is now empty
-            b->head = NULL;
+            b->head = NULL; // The buffer is now empty
         }
-
         uno_line_destroy(rm_line);
     } else {
         UnoLine* current = b->head;
 
-        for (uint64_t i = 0; i < row; i++) {
+        for (uint64_t i = 0; i < row; i++)
             current = current->next;
-        }
 
         UnoLine* rm_line = current;
         current->prev->next = current->next;
@@ -183,7 +215,6 @@ void uno_delete_line_at(UnoBuffer* b, uint64_t row)
 
         uno_line_destroy(rm_line);
     }
-
     b->rows--;
 }
 
@@ -197,4 +228,13 @@ void uno_buffer_destroy(UnoBuffer* b)
         current = next;
     }
     free(b);
+}
+
+void uno_buffer_print(UnoBuffer* b)
+{
+    UnoLine* current = b->head;
+    for (int i = 0; i < b->rows; i++) {
+        printf("[%-4lu, %-4lu]%s\n", current->len, current->cap, current->str);
+        current = current->next;
+    }
 }
