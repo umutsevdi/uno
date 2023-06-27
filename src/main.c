@@ -7,8 +7,6 @@
 #include <termios.h>
 #include <unistd.h>
 
-#include <pthread.h>
-
 UnoBuffer* b;
 struct termios orig_termios;
 void die(const char* s) { }
