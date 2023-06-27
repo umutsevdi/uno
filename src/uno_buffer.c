@@ -121,7 +121,7 @@ void uno_buffer_add_line_end(UnoBuffer* b, UnoLine* l)
     b->rows++;
 }
 
-UnoBuffer* uno_buffer_add_line_to(UnoBuffer* b, UnoLine* l, uint64_t row)
+void uno_buffer_add_line_to(UnoBuffer* b, UnoLine* l, uint64_t row)
 {
     if (row == 0) {
         uno_buffer_add_line_head(b, l);
@@ -143,8 +143,6 @@ UnoBuffer* uno_buffer_add_line_to(UnoBuffer* b, UnoLine* l, uint64_t row)
         current->prev = l;
         b->rows++;
     }
-
-    return b;
 }
 
 void uno_buffer_swap(UnoBuffer* b, uint64_t r1, uint64_t r2)
@@ -176,6 +174,19 @@ void uno_buffer_swap(UnoBuffer* b, uint64_t r1, uint64_t r2)
     row_ptr2->str = str;
     row_ptr2->len = len;
     row_ptr2->cap = cap;
+}
+
+UnoLine* uno_get_line_at(UnoBuffer* b, uint64_t row)
+{
+    if (b->rows < row) {
+        return NULL;
+    }
+
+    UnoLine* c = b->head;
+    for (uint64_t i = 0; i < row; i++) {
+        c = c->next;
+    }
+    return c;
 }
 
 void uno_delete_line_at(UnoBuffer* b, uint64_t row)
@@ -220,7 +231,6 @@ void uno_delete_line_at(UnoBuffer* b, uint64_t row)
 
 void uno_buffer_destroy(UnoBuffer* b)
 {
-    uint64_t rows = b->rows;
     UnoLine* current = b->head;
     for (uint64_t i = 0; i < b->rows; i++) {
         UnoLine* next = current->next;
@@ -233,7 +243,7 @@ void uno_buffer_destroy(UnoBuffer* b)
 void uno_buffer_print(UnoBuffer* b)
 {
     UnoLine* current = b->head;
-    for (int i = 0; i < b->rows; i++) {
+    for (uint64_t i = 0; i < b->rows; i++) {
         printf("[%-4lu, %-4lu]%s\n", current->len, current->cap, current->str);
         current = current->next;
     }

@@ -22,10 +22,12 @@ typedef struct __UNO_BUFFER_LINE {
     struct __UNO_BUFFER_LINE* next;
 } UnoLine;
 
-typedef struct {
+typedef struct __UNO_BUFFER {
     UnoLine* head;
     UnoLine* tail;
     uint64_t rows;
+    uint64_t cursor_row;
+    uint64_t cursor_col;
 } UnoBuffer;
 
 /* Allocate a new line. Free with {@link uno_line_destroy}. */
@@ -74,9 +76,11 @@ void uno_buffer_add_line_head(UnoBuffer* b, UnoLine* l);
 
 void uno_buffer_add_line_end(UnoBuffer* b, UnoLine* l);
 
-UnoBuffer* uno_buffer_add_line_to(UnoBuffer* b, UnoLine* l, uint64_t row);
+void uno_buffer_add_line_to(UnoBuffer* b, UnoLine* l, uint64_t row);
 
 void uno_buffer_swap(UnoBuffer* b, uint64_t r1, uint64_t r2);
+
+UnoLine* uno_get_line_at(UnoBuffer* b, uint64_t row);
 
 void uno_delete_line_at(UnoBuffer* b, uint64_t row);
 

@@ -5,6 +5,32 @@
 #define START_TEST(s) printf("START: " #s "\n")
 #define END_TEST(s) printf("PASS : " #s "\n")
 
+void uno_line_get_line_at_test()
+{
+    START_TEST(uno_line_get_line_at_test);
+    UnoLine* line1 = uno_line_new(10);
+    uno_line_write(line1, "Line 1", strlen("Line 1"));
+    UnoLine* line2 = uno_line_new(10);
+    uno_line_write(line2, "Line 2", strlen("Line 2"));
+    UnoLine* line3 = uno_line_new(10);
+    uno_line_write(line3, "Line 3", strlen("Line 3"));
+
+    UnoBuffer* buffer = uno_buffer_new(1);
+    uno_buffer_add_line_head(buffer, line1);
+    uno_buffer_add_line_to(buffer, line2, 1);
+    uno_buffer_add_line_to(buffer, line3, 2);
+
+    UnoLine* to_compare = uno_get_line_at(buffer, 0);
+    assert(to_compare == buffer->head);
+    to_compare = uno_get_line_at(buffer, 1);
+    assert(to_compare == buffer->head->next);
+    to_compare = uno_get_line_at(buffer, 2);
+    assert(to_compare == buffer->head->next->next);
+
+    uno_buffer_destroy(buffer);
+    END_TEST(uno_line_get_line_at_test);
+}
+
 void uno_line_resize_test()
 {
     START_TEST(uno_line_resize_test);
@@ -229,6 +255,7 @@ void uno_buffer_swap_when_other_and_other()
 
 int main(int argc, char* argv[])
 {
+    uno_line_get_line_at_test();
     uno_line_resize_test();
     uno_line_write_test();
     uno_line_append_test();
