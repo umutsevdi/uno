@@ -1,11 +1,13 @@
 #include "uno_buffer.h"
 #include "uno_display.h"
 #include <errno.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
+#include <wchar.h>
 
 UnoBuffer* b;
 struct termios orig_termios;
@@ -57,6 +59,7 @@ void move_h(int* i, int* j, int dir)
 
 int main()
 {
+    setlocale(LC_ALL, "en_US.UTF-8");
     popen("tput init", "w");
     UnoDisplay* d = uno_display_start();
 
@@ -71,12 +74,9 @@ int main()
             c_line = uno_line_new(80);
             uno_buffer_add_line_to(d->current_buffer, c_line, i);
         }
-        char c = '\0';
-        if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN)
+        wchar_t c = L'\0';
+        if (read(STDIN_FILENO, &c, sizeof(wchar_t)) == -1 && errno != EAGAIN)
             die("read");
-        /*        if (iscntrl(c)) {
-                    printf("%d\r\n", c);
-                } else */
         switch (c) {
         case 0:
             break;
@@ -91,36 +91,36 @@ int main()
             }
             e_char = 0;
             break;
-        case '\r': // terminal mode new line or real new line
-        case '\n':
+        case L'\r': // terminal mode new line or real new line
+        case L'\n':
             i++;
-            c_line->str[j + 1] = '\0';
+            c_line->str[j + 1] = L'\0';
             j = 0;
             e_char = 0;
             break;
-        case '\e':
+        case L'\e':
             e_char = !e_char;
             break;
-        case '[': // if escape enabled, it should continue
+        case L'[': // if escape enabled, it should continue
             m_char = e_char;
             if (m_char)
                 break;
         default:
             if (m_char) {
                 switch (c) {
-                case 'D':
+                case L'D':
                     // left
                     move_h(&i, &j, 0);
                     break;
-                case 'B':
+                case L'B':
                     // down
                     i++;
                     break;
-                case 'A':
+                case L'A':
                     i--;
                     break;
                     // up
-                case 'C':
+                case L'C':
                     move_h(&i, &j, 1);
                     // right
                     break;
@@ -137,7 +137,8 @@ int main()
                     j = 0;
                     i++;
                 }
-                printf("%c\r\n", c);
+                //                wprintf(L"[%lc]\r\n", c);
+                //                wprintf(L"%lc\r\n", c);
             }
             break;
         }

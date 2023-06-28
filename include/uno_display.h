@@ -11,12 +11,23 @@
 #define __UNO_DISP__
 #include "uno_buffer.h"
 
+#include "uno_buffer.h"
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#define UNO_BASE_SIZE 80
+
+// Set __SIZE elements of type __TYPE to the _VALUE
+#define UNO_MULTISET(_VALUE, _TYPE, _SIZE, ...) \
+    do {                                        \
+        _TYPE* _ARRAY[] = { __VA_ARGS__ };      \
+        for (size_t _i = 0; _i < _SIZE; ++_i)   \
+            *_ARRAY[_i] = _VALUE;               \
+    } while (0);
 
 typedef enum DSIG {
     UNO_SIG_EXIT = -1,
@@ -25,12 +36,12 @@ typedef enum DSIG {
 } UNO_SIG;
 
 typedef struct {
-    int row;
-    int col;
+    uint64_t row;
+    uint64_t col;
 } Term;
 
 typedef struct _UNO_DISP {
-    char c;
+    wchar_t c;
     enum DSIG signal;
     UnoBuffer* current_buffer;
     UnoBuffer** buffer;

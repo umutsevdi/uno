@@ -3,7 +3,7 @@
 
 UnoLine* uno_line_new(uint64_t len)
 {
-    char* str = calloc(len + 1, sizeof(char));
+    wchar_t* str = calloc(len + 1, sizeof(wchar_t));
     UnoLine* l = malloc(sizeof(UnoLine));
     l->str = str;
     l->cap = len;
@@ -18,52 +18,52 @@ void uno_line_resize(UnoLine* l, uint64_t new_size)
     if (new_size < l->cap) {
         if (new_size < l->len)
             l->len = new_size;
-        l->str[new_size] = '\0';
+        l->str[new_size] = L'\0';
     } else {
-        char* str = calloc(2 * new_size + 1, sizeof(char));
-        memcpy(str, l->str, l->cap);
+        wchar_t* str = calloc(2 * new_size + 1, sizeof(wchar_t));
+        wmemcpy(str, l->str, l->cap);
         free(l->str);
         l->str = str;
         l->str[new_size] = 0;
-        l->cap = new_size;
+        l->cap = 2* new_size;
     }
 }
 
-void uno_line_write(UnoLine* l, const char* str, uint64_t len)
+void uno_line_write(UnoLine* l, const wchar_t* str, uint64_t len)
 {
     if (l->cap < len) {
         uno_line_resize(l, len);
     }
-    strncpy(l->str, str, len);
+    wmemcpy(l->str, str, len);
     l->len = len;
     if (str[len] != 0) {
         l->str[len] = 0;
     }
 }
 
-void uno_line_append(UnoLine* l, const char* str, uint64_t len)
+void uno_line_append(UnoLine* l, const wchar_t* str, uint64_t len)
 {
-    uint64_t char_left = l->cap - l->len;
+    size_t char_left = l->cap - l->len;
     if (char_left < len) {
         uno_line_resize(l, len + l->len);
     }
     char_left = l->cap - l->len;
     uint64_t to_cpy = len <= char_left ? len : char_left;
-    strncpy(l->str + l->len, str, to_cpy);
+    wmemcpy(l->str + l->len, str, to_cpy);
     l->len = l->len + to_cpy;
     if (str[len] != 0) {
         l->str[len] = 0;
     }
 }
 
-void uno_line_prepend(UnoLine* l, const char* str, uint64_t len)
+void uno_line_prepend(UnoLine* l, const wchar_t* str, uint64_t len)
 {
-    uint64_t char_left = l->cap - l->len;
+    size_t char_left = l->cap - l->len;
     if (char_left < len) {
         uno_line_resize(l, len + l->len);
     }
-    memmove(l->str + len, l->str, l->len);
-    strncpy(l->str, str, len);
+    wmemmove(l->str + len, l->str, l->len);
+    wmemcpy(l->str, str, len);
     l->len = l->len + len;
     if (str[len] != 0) {
         l->str[len] = 0;
@@ -128,7 +128,7 @@ void uno_buffer_add_line_to(UnoBuffer* b, UnoLine* l, uint64_t row)
         uno_buffer_add_line_end(b, l);
     } else {
         UnoLine* current = b->head;
-        for (uint64_t i = 0; i < row; i++) {
+        for (size_t i = 0; i < row; i++) {
             current = current->next;
         }
 
@@ -164,9 +164,9 @@ void uno_buffer_swap(UnoBuffer* b, uint64_t r1, uint64_t r2)
     }
     if (row_ptr1 == NULL || row_ptr2 == NULL)
         return; // shouldn't occur
-    char* str = row_ptr1->str;
-    uint64_t len = row_ptr1->len;
-    uint64_t cap = row_ptr1->cap;
+    wchar_t* str = row_ptr1->str;
+    size_t len = row_ptr1->len;
+    size_t cap = row_ptr1->cap;
     row_ptr1->str = row_ptr2->str;
     row_ptr1->len = row_ptr2->len;
     row_ptr1->cap = row_ptr2->cap;
@@ -182,7 +182,7 @@ UnoLine* uno_get_line_at(UnoBuffer* b, uint64_t row)
     }
 
     UnoLine* c = b->head;
-    for (uint64_t i = 0; i < row; i++) {
+    for (size_t i = 0; i < row; i++) {
         c = c->next;
     }
     return c;
@@ -216,7 +216,7 @@ void uno_delete_line_at(UnoBuffer* b, uint64_t row)
     } else {
         UnoLine* current = b->head;
 
-        for (uint64_t i = 0; i < row; i++)
+        for (size_t i = 0; i < row; i++)
             current = current->next;
 
         UnoLine* rm_line = current;
@@ -231,7 +231,7 @@ void uno_delete_line_at(UnoBuffer* b, uint64_t row)
 void uno_buffer_destroy(UnoBuffer* b)
 {
     UnoLine* current = b->head;
-    for (uint64_t i = 0; i < b->rows; i++) {
+    for (size_t i = 0; i < b->rows; i++) {
         UnoLine* next = current->next;
         uno_line_destroy(current);
         current = next;
@@ -242,8 +242,8 @@ void uno_buffer_destroy(UnoBuffer* b)
 void uno_buffer_print(UnoBuffer* b)
 {
     UnoLine* current = b->head;
-    for (uint64_t i = 0; i < b->rows; i++) {
-        printf("[%-4lu, %-4lu]%s\n", current->len, current->cap, current->str);
+    for (size_t i = 0; i < b->rows; i++) {
+        wprintf(L"[%-4lu, %-4lu]%ls\n", current->len, current->cap, current->str);
         current = current->next;
     }
 }

@@ -1,6 +1,4 @@
 #include "uno_display.h"
-#include "uno_buffer.h"
-#define UNO_BASE_BUFFER_SIZE
 
 static void* display(void* sig)
 {
@@ -18,8 +16,8 @@ UnoDisplay* uno_display_start()
 {
     UnoDisplay* d = malloc(sizeof(UnoDisplay));
     d->c = 0;
-    d->signal = UNO_SIG_READY;
-    d->current_buffer = uno_buffer_new(80);
+    d->signal = UNO_SIG_BUFFER;
+    d->current_buffer = uno_buffer_new(UNO_BASE_SIZE);
     d->buffer = &d->current_buffer;
     d->buffer_count = 1;
     pthread_t thread;
@@ -34,11 +32,14 @@ Term uno_get_terminal()
     char line[16];
     FILE* f = popen("tput cols", "r");
     fgets(line, 16, f);
-    t.col = atoi(line);
+
+    char* endptr;
+    t.col = strtoull(line, &endptr, 10);
     pclose(f);
     f = popen("tput lines", "r");
     fgets(line, 16, f);
-    t.row = atoi(line);
+    t.row = strtoull(line, &endptr, 10);
+    t.row = atol(line);
     pclose(f);
     return t;
 }
@@ -46,32 +47,50 @@ Term uno_get_terminal()
 void uno_fill_scr(UnoDisplay* d, Term t)
 {
     UnoBuffer* b = d->current_buffer;
-    char* line = calloc(t.col + 1, sizeof(char));
+
     FILE* fd_clear = popen("tput clear", "w");
     pclose(fd_clear);
-    for (int i = 0; i < t.col; i++) {
-        printf("-");
-    }
-    printf("\r\n");
+
+    wchar_t* line = calloc(t.col + 1, sizeof(wchar_t));
+    line[0] = L'┌';
+    line[t.col - 1] = L'┐';
+    wmemset(line + 1, L'─', t.col - 1);
+    UNO_MULTISET(L'┬', wchar_t, 5,
+        &line[43],
+        &line[54],
+        &line[65],
+        &line[75],
+        &line[84]);
+    wprintf(L"%ls\r\n", line);
     UnoLine* l = uno_get_line_at(b, b->cursor_row);
-    sprintf(line, "%-40sr:%-4lu\tc%-4lu\ti:%c\tc:%c", "file.txt",
+    swprintf(line, t.col, L"│ %-40s │ ROW:%-4lu │ COL:%-4lu │ INPUT:%lc │ CHAR:%lc │", "file.txt",
         b->cursor_row,
-        b->cursor_col, d->c,
-        l->str[b->cursor_col]);
-    printf("%s\r\n", line);
-    for (int i = 0; i < t.col; i++) {
-        printf("-");
+        b->cursor_col, d->c != 0 ? d->c : L' ',
+        l->str[b->cursor_col] != 0 ? l->str[b->cursor_col] : L' ');
+    wprintf(L"%ls\r\n", line);
+
+    line[0] = L'├';
+    line[t.col - 1] = L'┤';
+    wmemset(line + 1, L'─', t.col - 1);
+    UNO_MULTISET(L'┴', wchar_t, 5,
+        &line[43],
+        &line[54],
+        &line[65],
+        &line[75],
+        &line[84]);
+    wprintf(L"%ls\r\n", line);
+
+    line[0] = L'│';
+    line[t.col - 1] = L'│';
+    wmemset(line + 1, L' ', t.col - 1);
+    for (size_t i = 3; i < t.row - 4; i++) {
+        wprintf(L"%ls\r\n", line);
     }
-    line[0] = '|';
-    memset(line + 1, ' ', t.col - 1);
-    line[t.col - 1] = '|';
-    for (int i = 3; i < t.row - 2; i++) {
-        printf("%s\r\n", line);
-    }
-    for (int i = 0; i < t.col; i++) {
-        printf("-");
-    }
-    printf("\r\n");
+
+    line[0] = L'└';
+    line[t.col - 1] = L'┘';
+    wmemset(line + 1, L'─', t.col - 1);
+    wprintf(L"%ls\r\n", line);
     free(line);
     FILE* fd = popen("tput cup 3 0", "w");
     pclose(fd);
@@ -82,20 +101,21 @@ void uno_redraw(UnoDisplay* d)
     UnoBuffer* b = d->current_buffer;
     Term t = uno_get_terminal();
     uno_fill_scr(d, t);
-    char* line = calloc(t.col + 1, sizeof(char));
-    for (uint64_t i = 0; i < b->rows; i++) {
+    wchar_t* line = calloc(t.col + 1, sizeof(wchar_t));
+    for (size_t i = 0; i < b->rows; i++) {
         UnoLine* l = uno_get_line_at(b, i);
         if (l == NULL) {
             continue;
         }
-        strncpy(line, l->str, t.col);
+        swprintf(line, t.col, L"%ls", l->str);
         line[t.col - 1] = 0;
         if (l->len > t.col)
-            line[t.col - 1] = '>';
+            line[l->len] = L'╌';
         if (b->cursor_row == i) {
             uint64_t cursor = b->cursor_col < t.col - 2 ? b->cursor_col : t.col - 2;
-            line[cursor] = '|';
+            line[cursor] = L'█';
         }
-        printf("| %s\r\n", line);
+        wprintf(L"│~%ls\r\n", line);
+        wmemset(line, 0, t.col + 1);
     }
 }
