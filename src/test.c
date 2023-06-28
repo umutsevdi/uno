@@ -1,8 +1,11 @@
 #include "uno_buffer.h"
+#include "uno_display.h"
 #include <assert.h>
+#include <locale.h>
 #include <stdio.h>
-#include <string.h>
+#include <unistd.h>
 #include <wchar.h>
+
 #define TEST(s)                \
     printf("START: " #s "\n"); \
     s();                       \
@@ -11,11 +14,11 @@
 void uno_line_get_line_at_test()
 {
     UnoLine* line1 = uno_line_new(10);
-    uno_line_write(line1, L"Line 1", strlen("Line 1"));
+    uno_line_write(line1, L"Line 1", wcslen(L"Line 1"));
     UnoLine* line2 = uno_line_new(10);
-    uno_line_write(line2, L"Line 2", strlen("Line 2"));
+    uno_line_write(line2, L"Line 2", wcslen(L"Line 2"));
     UnoLine* line3 = uno_line_new(10);
-    uno_line_write(line3, L"Line 3", strlen("Line 3"));
+    uno_line_write(line3, L"Line 3", wcslen(L"Line 3"));
 
     UnoBuffer* buffer = uno_buffer_new(1);
     uno_buffer_add_line_head(buffer, line1);
@@ -150,9 +153,9 @@ void uno_line_prepend_test()
 void uno_buffer_swap_when_head_and_other()
 {
     UnoLine* line1 = uno_line_new(10);
-    uno_line_write(line1, L"Line 1", strlen("Line 1"));
+    uno_line_write(line1, L"Line 1", wcslen(L"Line 1"));
     UnoLine* line2 = uno_line_new(10);
-    uno_line_write(line2, L"Line 2", strlen("Line 2"));
+    uno_line_write(line2, L"Line 2", wcslen(L"Line 2"));
 
     UnoBuffer* buffer = uno_buffer_new(1);
     uno_buffer_add_line_head(buffer, line1);
@@ -169,9 +172,9 @@ void uno_buffer_swap_when_head_and_other()
 void uno_buffer_swap_when_tail_and_other()
 {
     UnoLine* line1 = uno_line_new(10);
-    uno_line_write(line1, L"Line 1", strlen("Line 1"));
+    uno_line_write(line1, L"Line 1", wcslen(L"Line 1"));
     UnoLine* line2 = uno_line_new(10);
-    uno_line_write(line2, L"Line 2", strlen("Line 2"));
+    uno_line_write(line2, L"Line 2", wcslen(L"Line 2"));
 
     UnoBuffer* buffer = uno_buffer_new(1);
     uno_buffer_add_line_to(buffer, line1, 1);
@@ -188,11 +191,11 @@ void uno_buffer_swap_when_tail_and_other()
 void uno_buffer_swap_when_head_and_tail()
 {
     UnoLine* line1 = uno_line_new(10);
-    uno_line_write(line1, L"Line 1", strlen("Line 1"));
+    uno_line_write(line1, L"Line 1", wcslen(L"Line 1"));
     UnoLine* line2 = uno_line_new(10);
-    uno_line_write(line2, L"Line 2", strlen("Line 2"));
+    uno_line_write(line2, L"Line 2", wcslen(L"Line 2"));
     UnoLine* line3 = uno_line_new(10);
-    uno_line_write(line3, L"Line 3", strlen("Line 3"));
+    uno_line_write(line3, L"Line 3", wcslen(L"Line 3"));
 
     UnoBuffer* buffer = uno_buffer_new(1);
     uno_buffer_add_line_head(buffer, line1);
@@ -210,13 +213,13 @@ void uno_buffer_swap_when_head_and_tail()
 void uno_buffer_swap_when_other_and_other()
 {
     UnoLine* line1 = uno_line_new(10);
-    uno_line_write(line1, L"Line 1", strlen("Line 1"));
+    uno_line_write(line1, L"Line 1", wcslen(L"Line 1"));
     UnoLine* line2 = uno_line_new(10);
-    uno_line_write(line2, L"Line 2", strlen("Line 2"));
+    uno_line_write(line2, L"Line 2", wcslen(L"Line 2"));
     UnoLine* line3 = uno_line_new(10);
-    uno_line_write(line3, L"Line 3", strlen("Line 3"));
+    uno_line_write(line3, L"Line 3", wcslen(L"Line 3"));
     UnoLine* line4 = uno_line_new(10);
-    uno_line_write(line4, L"Line 4", strlen("Line 4"));
+    uno_line_write(line4, L"Line 4", wcslen(L"Line 4"));
 
     UnoBuffer* buffer = uno_buffer_new(1);
     uno_buffer_add_line_to(buffer, line1, 1);
@@ -232,8 +235,35 @@ void uno_buffer_swap_when_other_and_other()
     uno_buffer_destroy(buffer);
 }
 
+void test_utf8()
+{
+    UnoLine* line1 = uno_line_new(10);
+    uno_line_write(line1,
+        L"Merhaba Dünya, İyi akşamlar!",
+        wcslen(L"Merhaba Dünya, İyi akşamlar!"));
+    wprintf(L"%ls\n", line1->str);
+    UnoLine* line2 = uno_line_new(10);
+    uno_line_write(line2, L"Hello world, good night!",
+        wcslen(L"Hello world, good night!"));
+    UnoLine* line3 = uno_line_new(10);
+    uno_line_write(line3, L"Привет, мир, спокойной ночи !",
+        wcslen(L"Привет, мир, спокойной ночи!"));
+    UnoLine* line4 = uno_line_new(10);
+    uno_line_write(line4, L"안녕 세상, 좋은 밤!",
+        wcslen(L"안녕 세상, 좋은 밤!"));
+
+    UnoBuffer* buffer = uno_buffer_new(1);
+    uno_buffer_add_line_to(buffer, line1, 1);
+    uno_buffer_add_line_to(buffer, line2, 2);
+    uno_buffer_add_line_to(buffer, line3, 3);
+    uno_buffer_add_line_to(buffer, line4, 4);
+    uno_buffer_print(buffer);
+}
+
 int main(int argc, char* argv[])
 {
+    setlocale(LC_ALL, "en_US.UTF-8");
+    wprintf(L"");
     TEST(uno_line_get_line_at_test);
     TEST(uno_line_resize_test);
     TEST(uno_line_write_test);
@@ -244,6 +274,8 @@ int main(int argc, char* argv[])
     TEST(uno_buffer_swap_when_tail_and_other);
     TEST(uno_buffer_swap_when_head_and_tail);
     TEST(uno_buffer_swap_when_other_and_other);
+
+    TEST(test_utf8);
 
     return 0;
 }

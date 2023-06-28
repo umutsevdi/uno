@@ -1,5 +1,6 @@
 #include "uno_buffer.h"
 #include <stdio.h>
+#include <wchar.h>
 
 UnoLine* uno_line_new(uint64_t len)
 {
@@ -18,14 +19,14 @@ void uno_line_resize(UnoLine* l, uint64_t new_size)
     if (new_size < l->cap) {
         if (new_size < l->len)
             l->len = new_size;
-        l->str[new_size] = L'\0';
+        l->str[new_size] = 0;
     } else {
         wchar_t* str = calloc(2 * new_size + 1, sizeof(wchar_t));
         wmemcpy(str, l->str, l->cap);
         free(l->str);
         l->str = str;
         l->str[new_size] = 0;
-        l->cap = 2* new_size;
+        l->cap = 2 * new_size;
     }
 }
 

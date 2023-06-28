@@ -38,8 +38,8 @@ UnoLine* uno_line_new(uint64_t len);
  * Grow or shrink given line the capacity of the line to the new size
  * * If the capacity is less then given new_size, new string is allocated
  * with the capacity of 2*(new_size+l->len)
- * @l        - line to resize
- * @new_size - new size
+ * @param l        - line to resize
+ * @param new_size - new size
  */
 void uno_line_resize(UnoLine* l, uint64_t new_size);
 
