@@ -1,7 +1,9 @@
 # UNO - Nano-like text editor
 ## TODO
+- [x] Fix UTF-8 char bugs
+- [ ] Fix UTF-8 new line random char bug
 - [ ] Add scrolling behavior
-- [ ] Add reallocation
+- [x] Add reallocation
 - [ ] Rewrite movement
 - [ ] Add multiple buffers and switch
 - [ ] File saving and loading
