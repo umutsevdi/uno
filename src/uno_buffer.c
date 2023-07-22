@@ -1,6 +1,4 @@
 #include "uno_buffer.h"
-#include <stdio.h>
-#include <wchar.h>
 
 UnoLine* uno_line_new(uint64_t len)
 {

@@ -1,4 +1,5 @@
 #include "uno_display.h"
+#include <stdio.h>
 
 static void* display(void* sig)
 {
@@ -30,17 +31,15 @@ Term uno_get_terminal()
 {
     Term t = { 0 };
     char line[16];
+    char* endptr;
     FILE* f = popen("tput cols", "r");
     fgets(line, 16, f);
-
-    char* endptr;
-    t.col = strtoull(line, &endptr, 10);
     pclose(f);
+    t.col = strtoull(line, &endptr, 10);
     f = popen("tput lines", "r");
     fgets(line, 16, f);
-    t.row = strtoull(line, &endptr, 10);
-    t.row = atol(line);
     pclose(f);
+    t.row = strtoull(line, &endptr, 10);
     return t;
 }
 
@@ -98,9 +97,10 @@ void uno_fill_scr(UnoDisplay* d, Term t)
 
 void uno_redraw(UnoDisplay* d)
 {
+//    return;
     UnoBuffer* b = d->current_buffer;
     Term t = uno_get_terminal();
-    uno_fill_scr(d, t);
+     uno_fill_scr(d, t);
     wchar_t* line = calloc(t.col + 1, sizeof(wchar_t));
     for (size_t i = 0; i < b->rows; i++) {
         UnoLine* l = uno_get_line_at(b, i);

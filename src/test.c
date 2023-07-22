@@ -1,15 +1,38 @@
 #include "uno_buffer.h"
 #include "uno_display.h"
+#include "uno_movement.h"
 #include <assert.h>
 #include <locale.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <wchar.h>
 
-#define TEST(s)                \
-    printf("START: " #s "\n"); \
-    s();                       \
-    printf("PASS : " #s "\n")
+#define TEST(s)                  \
+    wprintf(L"START: " #s "\n"); \
+    s();                         \
+    wprintf(L"PASS : " #s "\n")
+
+void uno_move_cursor_test()
+{
+    uint64_t i = 0, j = 0;
+    uno_move_cursor(&i, &j, 0x0F000000);
+    assert(i == 0);
+    assert(j == 0);
+    uno_move_cursor(&i, &j, 0xC1000000);
+    assert(i == 1);
+    assert(j == 0);
+    i = 0, j = 0;
+    uno_move_cursor(&i, &j, 0xC2000000);
+    assert(i == 0);
+    assert(j == 1);
+    i = 0, j = 0;
+    uno_move_cursor(&i, &j, 0xC4000000);
+    assert(i == 0);
+    assert(j == 2);
+    i = 0, j = 0;
+    uno_move_cursor(&i, &j, 0xC8000000);
+    assert(i == 2);
+    assert(j == 0);
+}
 
 void uno_line_get_line_at_test()
 {
@@ -241,7 +264,6 @@ void test_utf8()
     uno_line_write(line1,
         L"Merhaba Dünya, İyi akşamlar!",
         wcslen(L"Merhaba Dünya, İyi akşamlar!"));
-    wprintf(L"%ls\n", line1->str);
     UnoLine* line2 = uno_line_new(10);
     uno_line_write(line2, L"Hello world, good night!",
         wcslen(L"Hello world, good night!"));
@@ -264,6 +286,8 @@ int main(int argc, char* argv[])
 {
     setlocale(LC_ALL, "en_US.UTF-8");
     wprintf(L"");
+    TEST(uno_move_cursor_test);
+
     TEST(uno_line_get_line_at_test);
     TEST(uno_line_resize_test);
     TEST(uno_line_write_test);

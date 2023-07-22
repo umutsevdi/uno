@@ -1,11 +1,11 @@
 #include "uno_buffer.h"
 #include "uno_display.h"
+#include "uno_movement.h"
 #include <errno.h>
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
-#include <unistd.h>
 
 UnoBuffer* b;
 struct termios orig_termios;
@@ -65,16 +65,17 @@ void move_h(int* i, int* j, int dir)
  *  - Return remaining N characters, where N is found from the the mask.
  *  @return UTF-8 character
  */
-wchar_t read_utf8()
+int read_utf8(wchar_t* c)
 {
-    wchar_t result = 0;
+    *c = 0;
     char buffer[6];
     ssize_t b_read = 0;
 
     // Read the first byte
     if (read(STDIN_FILENO, &buffer[0], 1) == -1) {
         perror("read");
-        exit(1);
+        return 1;
+        // corrupt UTF-8
     }
 
     // Determine the size of incoming UTF-8
@@ -92,38 +93,30 @@ wchar_t read_utf8()
         b_read = read(STDIN_FILENO, &buffer[1], b_count - 1);
         if (b_read == -1) {
             perror("read");
-            return 0;
+            return 1;
             // corrupt UTF-8
         }
-    } else
-        result = buffer[0];
+    } else {
+        *c = buffer[0];
+        return 0;
+    }
 
-    result = (buffer[0] & (0xFF >> b_count));
+    *c = (buffer[0] & (0xFF >> b_count));
     for (int i = 1; i < b_count; i++) {
         if ((buffer[i] & 0xC0) != 0x80) {
             // Invalid UTF-8 sequence.
             perror("read");
-            return 0;
+            return 2;
         }
-        result = (result << 6) | (buffer[i] & 0x3F);
+        *c = (*c << 6) | (buffer[i] & 0x3F);
     }
-
-    return result;
-
-    /*
-    // Combine the bytes to form the UTF-8 character
-    for (int i = 0; i < b_count; i++) {
-        result <<= 6;
-        result |= (buffer[i] & 0x3F);
-    }
-
-    return result;*/
+    return 0;
 }
 
 int main()
 {
     setlocale(LC_ALL, "en_US.UTF-8");
-    wprintf(L"");
+//    wprintf(L"");
 
     popen("tput init", "w");
     UnoDisplay* d = uno_display_start();
@@ -139,11 +132,18 @@ int main()
             c_line = uno_line_new(80);
             uno_buffer_add_line_to(d->current_buffer, c_line, i);
         }
-        wchar_t c = read_utf8();
+        wchar_t c;
+        if (read_utf8(&c)) {
+            continue;
+        }
+
+        UnoRequest r = 0x0;
         switch (c) {
         case 0:
             break;
-        case 127:
+        case '\x7f': // backspace
+
+   //         wprintf(L"babkaka\r\n");
             c_line->str[j] = L' ';
             if (--j < 0) {
                 j = 255;
@@ -156,20 +156,24 @@ int main()
             break;
         case L'\r': // terminal mode new line or real new line
         case L'\n':
+  //          wprintf(L"newline\r\n");
             i++;
             c_line->str[j + 1] = 0;
             j = 0;
             e_char = 0;
             break;
         case L'\e':
+ //           wprintf(L"escape\r\n");
             e_char = !e_char;
             break;
         case L'[': // if escape enabled, it should continue
+//            wprintf(L"[ found\r\n");
             m_char = e_char;
             if (m_char)
                 break;
         default:
             if (m_char) {
+//                wprintf(L"movement\r\n");
                 switch (c) {
                 case L'D':
                     // left
@@ -200,7 +204,7 @@ int main()
                     j = 0;
                     i++;
                 }
-                wprintf(L"%lc\r\n", c);
+//                wprintf(L"%lc\r\n", c);
             }
             break;
         }

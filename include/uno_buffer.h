@@ -26,6 +26,7 @@ typedef struct __UNO_BUFFER_LINE {
 typedef struct __UNO_BUFFER {
     UnoLine* head;
     UnoLine* tail;
+    UnoLine* current;
     uint64_t rows;
     uint64_t cursor_row;
     uint64_t cursor_col;

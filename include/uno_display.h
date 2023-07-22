@@ -11,12 +11,7 @@
 #define __UNO_DISP__
 #include "uno_buffer.h"
 
-#include "uno_buffer.h"
 #include <pthread.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 
 #define UNO_BASE_SIZE 80
