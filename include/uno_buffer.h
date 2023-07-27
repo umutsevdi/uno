@@ -30,6 +30,7 @@ typedef struct __UNO_BUFFER {
     uint64_t rows;
     uint64_t cursor_row;
     uint64_t cursor_col;
+    wchar_t wchar_v;
 } UnoBuffer;
 
 /* Allocate a new line. Free with {@link uno_line_destroy}. */

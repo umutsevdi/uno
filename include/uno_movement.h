@@ -26,33 +26,30 @@
 #define __UNO_MOVEMENT__
 #include "uno_buffer.h"
 #include "uno_display.h"
-#define NL_CHAR 0x2000000
-#define BS_CHAR 0x3000000
-#define D_ENABLED 0x2000000
-#define M_ENABLED 0x4000000
-#define E_CHAR 0x8000000
-
-// counts in reverse order
-#define UNO_NTH_HEX(_VALUE, _N) (_VALUE & (0xFU << (_N * 4))) >> (_N * 4)
-#define UNO_TIMES(a, _TIMES)               \
-    for (size_t _I = 0; _I < _TIMES; _I++) \
-        a;
-
-#define UNO_DIR_MASK 0x0F00000
+#define UNO_RF_EQ(VAL, FLAG) ((VAL & FLAG) == FLAG)
+/**
+ * UnoRequest flags
+ */
 typedef enum {
-    UNO_POS_BUFFER = 0x0010000,
-    UNO_POS_POPUP = 0x0020000,
-    UNO_POS_DOWN = 0x0200000,
-    UNO_POS_UP = 0x0400000,
-    UNO_POS_RIGHT = 0x0800000,
-} UNO_POS;
-#define UNO_DIR_MASK 0x0F00000
+    UNO_RF_NEWLINE = 0x20000000, //     0010 0000 \r\n
+    UNO_RF_BACKSPACE = 0x30000000, //   0011 0000 BACKSPACE
+    UNO_RF_ESCAPE = 0x40000000, //      0100 0000 ESC
+    UNO_RF_DIR_ENABLED = 0x80000000, // 0101 0000
+    UNO_RF_CMD_ENABLED = 0x80000000, // 0111 0000
+    UNO_RF_DIR_LEFT = 0x01000000, //    0000 0001
+    UNO_RF_DIR_DOWN = 0x02000000, //    0000 0010
+    UNO_RF_DIR_UP = 0x04000000, //      0000 0100
+    UNO_RF_DIR_RIGHT = 0x08000000, //   0000 1000
+
+    UNO_RF_DIR_MASK = 0x0F000000, //    0000 1111
+} UNO_RF;
+
 typedef enum {
-    UNO_DIR_LEFT = 0x0100000,
-    UNO_DIR_DOWN = 0x0200000,
-    UNO_DIR_UP = 0x0400000,
-    UNO_DIR_RIGHT = 0x0800000,
-} UNO_DIR;
+    UNO_RF_WCHAR_L = L'D',
+    UNO_RF_WCHAR_D = L'B',
+    UNO_RF_WCHAR_U = L'A',
+    UNO_RF_WCHAR_R = L'C',
+} UNO_RF_DIR;
 
 /**
  * A 32 bit unsigned integer that represents the request type for movement
@@ -88,6 +85,6 @@ UnoRequest uno_make_req(wchar_t c, int is_cntrl, int is_escape, int is_alt);
  * @param r - Movement request, see UnoRequest
  *
  */
-void uno_move_cursor(UnoBuffer* b, UnoRequest r);
+void uno_move(UnoBuffer* b, UnoRequest r);
 
 #endif // !__UNO_MOVEMENT__

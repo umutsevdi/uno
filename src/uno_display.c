@@ -1,4 +1,5 @@
 #include "uno_display.h"
+#include <assert.h>
 #include <stdio.h>
 
 static void* display(void* sig)
@@ -57,14 +58,18 @@ void uno_fill_scr(UnoDisplay* d, Term t)
     UNO_MULTISET(L'┬', wchar_t, 5,
         &line[43],
         &line[54],
-        &line[65],
-        &line[75],
-        &line[84]);
+        &line[70],
+        &line[80],
+        &line[89]);
     wprintf(L"%ls\r\n", line);
     UnoLine* l = uno_get_line_at(b, b->cursor_row);
-    swprintf(line, t.col, L"│ %-40s │ ROW:%-4lu │ COL:%-4lu │ INPUT:%lc │ CHAR:%lc │", "file.txt",
+    swprintf(line, t.col,
+        L"│ %-40s │ ROW:%-4lu │ COL:%4lu/%-4lu │ INPUT:%lc │ CHAR:%lc │",
+        "file.txt",
         b->cursor_row,
-        b->cursor_col, d->c != 0 ? d->c : L' ',
+        b->cursor_col,
+        b->current != NULL ? b->current->len : 0,
+        d->c != 0 ? d->c : L' ',
         l->str[b->cursor_col] != 0 ? l->str[b->cursor_col] : L' ');
     wprintf(L"%ls\r\n", line);
 
@@ -74,9 +79,9 @@ void uno_fill_scr(UnoDisplay* d, Term t)
     UNO_MULTISET(L'┴', wchar_t, 5,
         &line[43],
         &line[54],
-        &line[65],
-        &line[75],
-        &line[84]);
+        &line[70],
+        &line[80],
+        &line[89]);
     wprintf(L"%ls\r\n", line);
 
     line[0] = L'│';
@@ -97,10 +102,10 @@ void uno_fill_scr(UnoDisplay* d, Term t)
 
 void uno_redraw(UnoDisplay* d)
 {
-//    return;
+    //    return;
     UnoBuffer* b = d->current_buffer;
     Term t = uno_get_terminal();
-     uno_fill_scr(d, t);
+    uno_fill_scr(d, t);
     wchar_t* line = calloc(t.col + 1, sizeof(wchar_t));
     for (size_t i = 0; i < b->rows; i++) {
         UnoLine* l = uno_get_line_at(b, i);

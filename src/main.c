@@ -34,28 +34,6 @@ void begin_raw()
         die("tcsetattr");
 }
 
-void move_h(int* i, int* j, int dir)
-{
-    if (dir) {
-        if (++(*j) > 255) {
-            j = 0;
-            if (++(*i) > 10) {
-                *i = 9;
-                *j = 255;
-            }
-        }
-
-    } else {
-        if (--(*j) < 0) {
-            *j = 255;
-            if (--(*i) < 0) {
-                *i = 0;
-                *j = 0;
-            }
-        }
-    }
-}
-
 /** UTF8 characters have varying byte size. To read we have to read consecutively.
  * * If the first byte passes the bitmask then it's a UTF8 else ASCII
  *    - If ASCII return first byte as wchar_t.
@@ -116,7 +94,7 @@ int read_utf8(wchar_t* c)
 int main()
 {
     setlocale(LC_ALL, "en_US.UTF-8");
-//    wprintf(L"");
+    //    wprintf(L"");
 
     popen("tput init", "w");
     UnoDisplay* d = uno_display_start();
@@ -125,6 +103,7 @@ int main()
     int e_char = 0;
     int m_char = 0;
     begin_raw();
+    UnoRequest r = 0x0;
     while (1) {
         b = d->current_buffer;
         UnoLine* c_line = uno_get_line_at(d->current_buffer, i);
@@ -137,78 +116,55 @@ int main()
             continue;
         }
 
-        UnoRequest r = 0x0;
         switch (c) {
         case 0:
             break;
         case '\x7f': // backspace
-
-   //         wprintf(L"babkaka\r\n");
-            c_line->str[j] = L' ';
-            if (--j < 0) {
-                j = 255;
-                if (--i < 0) {
-                    i = 0;
-                    j = 0;
-                }
-            }
-            e_char = 0;
+            uno_move(b, r | UNO_RF_BACKSPACE);
             break;
-        case L'\r': // terminal mode new line or real new line
+            //        case L'\r': // terminal mode new line or real new line
+        case L'\r':
         case L'\n':
-  //          wprintf(L"newline\r\n");
-            i++;
-            c_line->str[j + 1] = 0;
-            j = 0;
-            e_char = 0;
+            uno_move(b, r | UNO_RF_NEWLINE);
             break;
         case L'\e':
- //           wprintf(L"escape\r\n");
-            e_char = !e_char;
+            if (r & UNO_RF_ESCAPE)
+                r = 0;
+            else
+                r |= UNO_RF_ESCAPE;
             break;
         case L'[': // if escape enabled, it should continue
-//            wprintf(L"[ found\r\n");
-            m_char = e_char;
-            if (m_char)
+            if ((r & UNO_RF_ESCAPE) == UNO_RF_ESCAPE)
+                r = UNO_RF_DIR_ENABLED;
+            if (r & UNO_RF_DIR_ENABLED)
                 break;
         default:
-            if (m_char) {
-//                wprintf(L"movement\r\n");
+            if (r & UNO_RF_DIR_ENABLED) {
                 switch (c) {
-                case L'D':
-                    // left
-                    move_h(&i, &j, 0);
+                case UNO_RF_WCHAR_L:
+                    r |= UNO_RF_DIR_LEFT;
                     break;
-                case L'B':
-                    // down
-                    i++;
+                case UNO_RF_WCHAR_D:
+                    r |= UNO_RF_DIR_DOWN;
                     break;
-                case L'A':
-                    i--;
+                case UNO_RF_WCHAR_U:
+                    r |= UNO_RF_DIR_UP;
                     break;
-                    // up
-                case L'C':
-                    move_h(&i, &j, 1);
-                    // right
+                case UNO_RF_WCHAR_R:
+                    r |= UNO_RF_DIR_RIGHT;
                     break;
                 }
-                m_char = 0;
-                e_char = 0;
+                uno_move(b, r);
+                r = 0;
                 break;
             } else {
-                e_char = 0;
-                c_line->str[j] = c;
-                if (j < 256) {
-                    j++;
-                } else {
-                    j = 0;
-                    i++;
-                }
-//                wprintf(L"%lc\r\n", c);
+                r = 0;
+                b->wchar_v = c;
+                uno_move(b, r);
             }
             break;
         }
-        if (!e_char) {
+        if (!(r & UNO_RF_ESCAPE)) {
             if (c == '\e') {
                 d->signal = UNO_SIG_EXIT;
                 break;
@@ -216,10 +172,8 @@ int main()
         }
         if (c != '\0') {
             d->signal = UNO_SIG_BUFFER;
-            d->c = c;
-            d->current_buffer->cursor_row = i;
-            d->current_buffer->cursor_col = j;
         }
     }
+
     popen("tput clear", "w");
 }
