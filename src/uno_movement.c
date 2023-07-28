@@ -7,11 +7,11 @@ static void uno_move_arrow(UnoBuffer* b, UnoRequest r);
 static void uno_move_wchar(UnoBuffer* b);
 static void uno_move_nl(UnoBuffer* b);
 static void uno_move_bs(UnoBuffer* b);
+static void uno_move_del(UnoBuffer* b);
 static void uno_move_cmd(UnoBuffer* b, UnoRequest r);
 
 void uno_move(UnoBuffer* b, UnoRequest r)
 {
-    wprintf(L"REQ:%8X\r\n", r);
     if (b->current == NULL)
         b->current = uno_get_line_at(b, b->cursor_row);
     // Only move when E_CHAR and M_CHAR enabled
@@ -19,6 +19,8 @@ void uno_move(UnoBuffer* b, UnoRequest r)
         uno_move_arrow(b, r);
     else if (UNO_RF_EQ(r, UNO_RF_BACKSPACE))
         uno_move_bs(b);
+    else if (UNO_RF_EQ(r, UNO_RF_SPEC_DEL))
+        uno_move_del(b);
     else if (UNO_RF_EQ(r, UNO_RF_NEWLINE))
         uno_move_nl(b);
     else if (UNO_RF_EQ(r, UNO_RF_CMD_ENABLED))
@@ -74,13 +76,15 @@ static void uno_move_arrow(UnoBuffer* b, UnoRequest r)
 
 static void uno_move_wchar(UnoBuffer* b)
 {
+    /* Double the cap if not enough */
+    if (b->cursor_col >= b->current->cap)
+        uno_line_resize(b->current, b->current->cap);
+    if (b->cursor_col < b->current->len)
+        wmemmove(&b->current->str[b->cursor_col + 1],
+            &b->current->str[b->cursor_col],
+            b->current->len - b->cursor_col);
     b->current->str[b->cursor_col] = b->wchar_v;
     b->cursor_col++;
-    if (b->cursor_col >= b->current->len) {
-        /* Double the cap if not enough */
-        if (b->cursor_col >= b->current->cap)
-            uno_line_resize(b->current, b->current->cap);
-    }
     b->current->len++;
     b->wchar_v = L' ';
 }
@@ -97,22 +101,35 @@ static void uno_move_nl(UnoBuffer* b)
 
 static void uno_move_bs(UnoBuffer* b)
 {
-    b->current->str[b->cursor_col] = L' ';
     if (b->cursor_col != 0) {
         if (b->cursor_col < b->current->len)
             wmemmove(&b->current->str[b->cursor_col],
                 &b->current->str[b->cursor_col + 1],
                 b->current->len - b->cursor_col);
         b->cursor_col--;
+        b->current->len--;
     } else if (b->cursor_row != 0) {
+        // TODO Join current line to the previous line
         b->cursor_row--;
         b->current = b->current->prev;
     }
+}
 
-    b->current->len--;
+static void uno_move_del(UnoBuffer* b)
+{
+    if (b->current->len > 0) {
+        if (b->cursor_col < b->current->len) {
+            wmemmove(&b->current->str[b->cursor_col + 1],
+                &b->current->str[b->cursor_col + 2],
+                b->current->len - b->cursor_col);
+            b->current->len--;
+        }
+    } else {
+        // TODO Join the next line to the current
+    }
 }
 
 static void uno_move_cmd(UnoBuffer* b, UnoRequest r)
 {
-    r++;
+    // TODO Add command feature
 }

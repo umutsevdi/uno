@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <termios.h>
+#include <wchar.h>
 
 UnoBuffer* b;
 struct termios orig_termios;
@@ -94,16 +95,11 @@ int read_utf8(wchar_t* c)
 int main()
 {
     setlocale(LC_ALL, "en_US.UTF-8");
-    //    wprintf(L"");
-
     popen("tput init", "w");
-    UnoDisplay* d = uno_display_start();
-
-    int i = 0, j = 0;
-    int e_char = 0;
-    int m_char = 0;
     begin_raw();
-    UnoRequest r = 0x0;
+    UnoDisplay* d = uno_display_start();
+    int i = 0;
+    UnoRequest r = 0;
     while (1) {
         b = d->current_buffer;
         UnoLine* c_line = uno_get_line_at(d->current_buffer, i);
@@ -136,9 +132,12 @@ int main()
         case L'[': // if escape enabled, it should continue
             if ((r & UNO_RF_ESCAPE) == UNO_RF_ESCAPE)
                 r = UNO_RF_DIR_ENABLED;
-            if (r & UNO_RF_DIR_ENABLED)
+            if (r & UNO_RF_DIR_ENABLED) {
                 break;
+            }
         default:
+            // If DIR enabled its either movement char
+            // or SPEC character
             if (r & UNO_RF_DIR_ENABLED) {
                 switch (c) {
                 case UNO_RF_WCHAR_L:
@@ -153,8 +152,25 @@ int main()
                 case UNO_RF_WCHAR_R:
                     r |= UNO_RF_DIR_RIGHT;
                     break;
+                // Overwrite characters
+                // These characters leave '~' to be rendered
+                case UNO_RF_WCHAR_DEL:
+                    r = UNO_RF_SPEC_DEL;
+                    break;
+                case UNO_RF_WCHAR_INS:
+                    r = UNO_RF_SPEC_INS;
+                    break;
+                case UNO_RF_WCHAR_PGUP:
+                    r = UNO_RF_SPEC_PGUP;
+                    break;
+                case UNO_RF_WCHAR_PGDOWN:
+                    r = UNO_RF_SPEC_PGDW;
+                    break;
                 }
                 uno_move(b, r);
+                // Discard that extra character if SPEC
+                if (r & UNO_RF_SPEC_MASK)
+                    read_utf8(&c);
                 r = 0;
                 break;
             } else {

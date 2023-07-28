@@ -7,4 +7,5 @@
 - [x] Rewrite movement
 - [ ] Add multiple buffers and switch
 - [ ] File saving and loading
+- [ ] Add Backspace and Delete keys line joining ability at column 0. 
 
