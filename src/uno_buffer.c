@@ -1,5 +1,14 @@
 #include "uno_buffer.h"
 
+#define UNO_EOL(l)               \
+    if (l->str[l->len + 1] != 0) \
+        l->str[l->len + 1] = 0;
+
+UnoLine* uno_line_new_no_buffer()
+{
+    return calloc(1, sizeof(UnoLine));
+}
+
 UnoLine* uno_line_new(uint64_t len)
 {
     wchar_t* str = calloc(len + 1, sizeof(wchar_t));
@@ -35,9 +44,7 @@ void uno_line_write(UnoLine* l, const wchar_t* str, uint64_t len)
     }
     wmemcpy(l->str, str, len);
     l->len = len;
-    if (str[len] != 0) {
-        l->str[len] = 0;
-    }
+    UNO_EOL(l);
 }
 
 void uno_line_append(UnoLine* l, const wchar_t* str, uint64_t len)
@@ -50,9 +57,7 @@ void uno_line_append(UnoLine* l, const wchar_t* str, uint64_t len)
     uint64_t to_cpy = len <= char_left ? len : char_left;
     wmemcpy(l->str + l->len, str, to_cpy);
     l->len = l->len + to_cpy;
-    if (str[len] != 0) {
-        l->str[len] = 0;
-    }
+    UNO_EOL(l);
 }
 
 void uno_line_prepend(UnoLine* l, const wchar_t* str, uint64_t len)
@@ -64,9 +69,7 @@ void uno_line_prepend(UnoLine* l, const wchar_t* str, uint64_t len)
     wmemmove(l->str + len, l->str, l->len);
     wmemcpy(l->str, str, len);
     l->len = l->len + len;
-    if (str[len] != 0) {
-        l->str[len] = 0;
-    }
+    UNO_EOL(l);
 }
 
 void uno_line_destroy(UnoLine* l)
@@ -236,13 +239,4 @@ void uno_buffer_destroy(UnoBuffer* b)
         current = next;
     }
     free(b);
-}
-
-void uno_buffer_print(UnoBuffer* b)
-{
-    UnoLine* current = b->head;
-    for (size_t i = 0; i < b->rows; i++) {
-        wprintf(L"[%-4lu, %-4lu]%ls\n", current->len, current->cap, current->str);
-        current = current->next;
-    }
 }

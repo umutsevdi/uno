@@ -8,20 +8,6 @@
 
 *****************************************************************************/
 
-/*
- *   CASES:
- * move with arrow keys
- * press enter to new line
- * press backspace to delete last character and move back
- * ESC to run command
- * Arbitrary char press
- *
- *
- *
- *
- *
- */
-
 #ifndef __UNO_MOVEMENT__
 #define __UNO_MOVEMENT__
 #include "uno_buffer.h"
@@ -83,10 +69,6 @@ typedef enum {
  *  - Keybindings
  */
 typedef uint32_t UnoRequest;
-/**
- * Builds a request from given wchar_t and parameters
- */
-UnoRequest uno_make_req(wchar_t c, int is_cntrl, int is_escape, int is_alt);
 /**
  * Moves the cursor horizontally or vertically
  * based on given request by one.

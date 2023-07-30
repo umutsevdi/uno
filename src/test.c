@@ -3,51 +3,126 @@
 #include "uno_movement.h"
 #include <assert.h>
 #include <locale.h>
-#include <unistd.h>
+#include <stdarg.h>
 #include <wchar.h>
 
-#define TEST(s)                  \
-    wprintf(L"START: " #s "\n"); \
-    s();                         \
-    wprintf(L"PASS : " #s "\n")
-
-void uno_move_cursor_test()
+void uno_buffer_print(UnoBuffer* b)
 {
-    uint64_t i = 0, j = 0;
-    uno_move_cursor(&i, &j, 0x0F000000);
-    assert(i == 0);
-    assert(j == 0);
-    uno_move_cursor(&i, &j, 0xC1000000);
-    assert(i == 1);
-    assert(j == 0);
-    i = 0, j = 0;
-    uno_move_cursor(&i, &j, 0xC2000000);
-    assert(i == 0);
-    assert(j == 1);
-    i = 0, j = 0;
-    uno_move_cursor(&i, &j, 0xC4000000);
-    assert(i == 0);
-    assert(j == 2);
-    i = 0, j = 0;
-    uno_move_cursor(&i, &j, 0xC8000000);
-    assert(i == 2);
-    assert(j == 0);
+    UnoLine* current = b->head;
+    for (size_t i = 0; i < b->rows; i++) {
+        wprintf(L"       (%2lu, %2lu) %ls\n", current->len, current->cap, current->str);
+        current = current->next;
+    }
+}
+
+#define TEST(s) \
+    s();        \
+    wprintf(L"[ OK ] " #s "\n")
+
+#define BUFFER_DEF(b)                                 \
+    UnoLine* l1 = uno_line_new(10);                   \
+    uno_line_write(l1, L"Line 1", wcslen(L"Line 1")); \
+    UnoLine* l2 = uno_line_new(10);                   \
+    uno_line_write(l2, L"Line 2", wcslen(L"Line 2")); \
+    UnoLine* l3 = uno_line_new(10);                   \
+    uno_line_write(l3, L"Line 3", wcslen(L"Line 3")); \
+    UnoBuffer* b = uno_buffer_new(1);                 \
+    uno_buffer_add_line_head(b, l1);                  \
+    uno_buffer_add_line_to(b, l2, 1);                 \
+    uno_buffer_add_line_to(b, l3, 2);                 \
+    b->current = l1;
+#define ROW_DEF(b)            \
+    size_t r = b->cursor_row; \
+    size_t c = b->cursor_col;
+
+void uno_move_empty_request_test()
+{
+    BUFFER_DEF(b);
+    ROW_DEF(b);
+    uno_move(b, 0);
+    assert(b->cursor_row == r);
+    assert(b->cursor_col == c);
+}
+
+void uno_move_backspace_test()
+{
+    BUFFER_DEF(b);
+    ROW_DEF(b);
+    b->cursor_col = 3, c = 3;
+    assert(b->current != NULL);
+    wchar_t* old_str = wcsdup(b->current->str);
+    uno_move(b, UNO_RF_BACKSPACE);
+    assert(b->cursor_row == r);
+    assert(b->cursor_col == c - 1);
+    assert(wcscmp(old_str, b->current->str));
+    assert(!wcscmp(b->current->str, L"Lin 1"));
+}
+
+void uno_move_backspace_no_text_after_test()
+{
+    BUFFER_DEF(b);
+    ROW_DEF(b);
+    b->cursor_col = b->current->len, c = b->current->len;
+    assert(b->current != NULL);
+    wchar_t* old_str = wcsdup(b->current->str);
+    uno_move(b, UNO_RF_BACKSPACE);
+    uno_buffer_print(b);
+    assert(b->cursor_row == r);
+    assert(b->cursor_col == c - 1);
+    wprintf(L"[%ls|%ls]\n", old_str, b->current->str);
+    assert(wcscmp(old_str, b->current->str));
+    assert(!wcscmp(b->current->str, L"Line "));
+}
+
+void uno_move_backspace_join_lines_test()
+{
+    BUFFER_DEF(b);
+    ROW_DEF(b);
+    b->current = l2;
+    b->cursor_row = 1;
+    b->cursor_col = 0;
+    assert(b->current != NULL);
+    wchar_t* old_str = wcsdup(b->current->str);
+    wchar_t* old_pre_str = wcsdup(b->current->prev->str);
+    uno_move(b, UNO_RF_BACKSPACE);
+
+    assert(b->cursor_row == r);
+    assert(b->current->len == wcslen(old_pre_str) + wcslen(old_str));
+    assert(b->cursor_col == wcslen(old_pre_str));
+    assert(!wcscmp(b->current->str, L"Line 1Line 2"));
+}
+
+void uno_move_delete_test()
+{
+    BUFFER_DEF(b);
+    ROW_DEF(b);
+    b->cursor_col = 3, c = 3;
+    assert(b->current != NULL);
+    wchar_t* old_str = wcsdup(b->current->str);
+    uno_move(b, UNO_RF_SPEC_DEL);
+    assert(b->cursor_row == r);
+    assert(b->cursor_col == c);
+    assert(wcscmp(old_str, b->current->str));
+    assert(!wcscmp(b->current->str, L"Line1"));
+}
+
+void uno_move_NEWLINE_test()
+{
+    BUFFER_DEF(b);
+    ROW_DEF(b);
+    b->cursor_col = 3, c = 3;
+    assert(b->current != NULL);
+    wchar_t* old_str = wcsdup(b->current->str);
+    uno_move(b, UNO_RF_SPEC_DEL);
+    assert(b->cursor_row == r);
+    assert(b->cursor_col == c);
+    assert(wcscmp(old_str, b->current->str));
+    assert(!wcscmp(b->current->str, L"Line1"));
 }
 
 void uno_line_get_line_at_test()
 {
-    UnoLine* line1 = uno_line_new(10);
-    uno_line_write(line1, L"Line 1", wcslen(L"Line 1"));
-    UnoLine* line2 = uno_line_new(10);
-    uno_line_write(line2, L"Line 2", wcslen(L"Line 2"));
-    UnoLine* line3 = uno_line_new(10);
-    uno_line_write(line3, L"Line 3", wcslen(L"Line 3"));
-
-    UnoBuffer* buffer = uno_buffer_new(1);
-    uno_buffer_add_line_head(buffer, line1);
-    uno_buffer_add_line_to(buffer, line2, 1);
-    uno_buffer_add_line_to(buffer, line3, 2);
-
+    BUFFER_DEF(buffer);
     UnoLine* to_compare = uno_get_line_at(buffer, 0);
     assert(to_compare == buffer->head);
     to_compare = uno_get_line_at(buffer, 1);
@@ -286,8 +361,11 @@ int main(int argc, char* argv[])
 {
     setlocale(LC_ALL, "en_US.UTF-8");
     wprintf(L"");
-    TEST(uno_move_cursor_test);
-
+    TEST(uno_move_empty_request_test);
+    TEST(uno_move_backspace_test);
+    TEST(uno_move_backspace_no_text_after_test);
+    TEST(uno_move_backspace_join_lines_test);
+    TEST(uno_move_delete_test);
     TEST(uno_line_get_line_at_test);
     TEST(uno_line_resize_test);
     TEST(uno_line_write_test);

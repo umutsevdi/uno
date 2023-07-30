@@ -33,6 +33,9 @@ typedef struct __UNO_BUFFER {
     wchar_t wchar_v;
 } UnoBuffer;
 
+/* Allocate a new line with no size. Free with {@link uno_line_destroy}. */
+UnoLine* uno_line_new_no_buffer();
+
 /* Allocate a new line. Free with {@link uno_line_destroy}. */
 UnoLine* uno_line_new(uint64_t len);
 
@@ -90,7 +93,5 @@ UnoLine* uno_get_line_at(UnoBuffer* b, uint64_t row);
 void uno_delete_line_at(UnoBuffer* b, uint64_t row);
 
 void uno_buffer_destroy(UnoBuffer* b);
-
-void uno_buffer_print(UnoBuffer* b);
 
 #endif // !__UNO_BUFFER__

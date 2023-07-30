@@ -10,12 +10,24 @@
 
 UnoBuffer* b;
 struct termios orig_termios;
+
+/** UTF8 characters have varying byte size. To read we have to read consecutively.
+ * * If the first byte passes the bitmask then it's a UTF8 else ASCII
+ *    - If ASCII return first byte as wchar_t.
+ *    - Else read the mask
+ *      - If the mask is bigger than single byte read the next byte for the mask
+ *
+ *  - Return remaining N characters, where N is found from the the mask.
+ *  @return UTF-8 character
+ */
+int read_utf8(wchar_t* c);
+void read_keys();
+
 void die(const char* s) { }
 void stop_raw()
 {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
         die("tcsetattr");
-    uno_buffer_print(b);
 }
 
 void begin_raw()
@@ -35,15 +47,14 @@ void begin_raw()
         die("tcsetattr");
 }
 
-/** UTF8 characters have varying byte size. To read we have to read consecutively.
- * * If the first byte passes the bitmask then it's a UTF8 else ASCII
- *    - If ASCII return first byte as wchar_t.
- *    - Else read the mask
- *      - If the mask is bigger than single byte read the next byte for the mask
- *
- *  - Return remaining N characters, where N is found from the the mask.
- *  @return UTF-8 character
- */
+int main()
+{
+    setlocale(LC_ALL, "en_US.UTF-8");
+    popen("tput init", "w");
+    begin_raw();
+    read_keys();
+}
+
 int read_utf8(wchar_t* c)
 {
     *c = 0;
@@ -92,11 +103,8 @@ int read_utf8(wchar_t* c)
     return 0;
 }
 
-int main()
+void read_keys()
 {
-    setlocale(LC_ALL, "en_US.UTF-8");
-    popen("tput init", "w");
-    begin_raw();
     UnoDisplay* d = uno_display_start();
     int i = 0;
     UnoRequest r = 0;
@@ -116,11 +124,13 @@ int main()
         case 0:
             break;
         case '\x7f': // backspace
+            d->c = L'⌫';
             uno_move(b, r | UNO_RF_BACKSPACE);
             break;
             //        case L'\r': // terminal mode new line or real new line
         case L'\r':
         case L'\n':
+            d->c = L'↵';
             uno_move(b, r | UNO_RF_NEWLINE);
             break;
         case L'\e':
@@ -128,6 +138,7 @@ int main()
                 r = 0;
             else
                 r |= UNO_RF_ESCAPE;
+            d->c = L'␛';
             break;
         case L'[': // if escape enabled, it should continue
             if ((r & UNO_RF_ESCAPE) == UNO_RF_ESCAPE)
@@ -142,20 +153,25 @@ int main()
                 switch (c) {
                 case UNO_RF_WCHAR_L:
                     r |= UNO_RF_DIR_LEFT;
+                    d->c = L'←';
                     break;
                 case UNO_RF_WCHAR_D:
                     r |= UNO_RF_DIR_DOWN;
+                    d->c = L'↓';
                     break;
                 case UNO_RF_WCHAR_U:
                     r |= UNO_RF_DIR_UP;
+                    d->c = L'↑';
                     break;
                 case UNO_RF_WCHAR_R:
                     r |= UNO_RF_DIR_RIGHT;
+                    d->c = L'→';
                     break;
                 // Overwrite characters
                 // These characters leave '~' to be rendered
                 case UNO_RF_WCHAR_DEL:
                     r = UNO_RF_SPEC_DEL;
+                    d->c = L'⌦';
                     break;
                 case UNO_RF_WCHAR_INS:
                     r = UNO_RF_SPEC_INS;
@@ -165,6 +181,7 @@ int main()
                     break;
                 case UNO_RF_WCHAR_PGDOWN:
                     r = UNO_RF_SPEC_PGDW;
+                    d->c = L'↕';
                     break;
                 }
                 uno_move(b, r);
@@ -175,6 +192,7 @@ int main()
                 break;
             } else {
                 r = 0;
+                d->c = c;
                 b->wchar_v = c;
                 uno_move(b, r);
             }
